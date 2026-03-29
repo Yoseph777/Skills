@@ -1,7 +1,7 @@
 "use strict";
 
-/* API CONFIGURATION */
-const API_BASE = 'api';
+/* API CONFIGURATION - Single unified API file */
+const API_FILE = 'api.php';
 
 /* STATE */
 const state = {
@@ -16,7 +16,7 @@ const state = {
     category: null,
     newCategoryType: 'expense',
     recordFilter: 'all',
-    selectMode: 'from' // 'from', 'to', 'category'
+    selectMode: 'from'
   }
 };
 
@@ -74,7 +74,6 @@ function resetRecordForm() {
     btn.classList.toggle("active", btn.dataset.mode === 'expense');
   });
   
-  // Show category button, hide for transfer
   dom.selectCategoryBtn.style.display = 'block';
   updateModeUI();
 }
@@ -98,8 +97,10 @@ function showMessage(element, message) {
   element.innerHTML = `<li class="empty-message">${message}</li>`;
 }
 
-/* API FUNCTIONS */
-async function apiCall(endpoint, method = 'GET', data = null) {
+/* API FUNCTIONS - Using unified api.php */
+async function apiCall(action, method = 'GET', data = null) {
+  let url = `${API_FILE}?action=${action}`;
+  
   const options = {
     method,
     headers: {
@@ -108,26 +109,38 @@ async function apiCall(endpoint, method = 'GET', data = null) {
     credentials: 'include'
   };
 
-  if (data && method !== 'GET') {
+  // For GET and DELETE, add data as query params
+  if ((method === 'GET' || method === 'DELETE') && data) {
+    Object.keys(data).forEach(key => {
+      url += `&${key}=${encodeURIComponent(data[key])}`;
+    });
+  }
+  
+  // For POST, add body
+  if (method === 'POST' && data) {
     options.body = JSON.stringify(data);
   }
 
-  const response = await fetch(`${API_BASE}/${endpoint}`, options);
-  const result = await response.json();
-
-  if (!response.ok && response.status === 401) {
-    // Not authenticated, redirect to login
-    window.location.href = 'login.html';
-    return null;
+  try {
+    const response = await fetch(url, options);
+    const result = await response.json();
+    
+    if (!response.ok && response.status === 401) {
+      window.location.href = 'login.html';
+      return null;
+    }
+    
+    return result;
+  } catch (error) {
+    console.error('API Error:', error);
+    return { success: false, message: 'Connection error. Is the server running?' };
   }
-
-  return result;
 }
 
 /* AUTH FUNCTIONS */
 async function checkAuth() {
   try {
-    const result = await apiCall('auth.php?action=check');
+    const result = await apiCall('check');
     if (result && result.success && result.data.authenticated) {
       state.user = result.data.user;
       dom.userGreeting.textContent = `Hello, ${state.user.username}!`;
@@ -142,7 +155,7 @@ async function checkAuth() {
 
 async function logout() {
   try {
-    await apiCall('auth.php?action=logout');
+    await apiCall('logout');
     window.location.href = 'login.html';
   } catch (error) {
     console.error('Logout failed:', error);
@@ -152,10 +165,12 @@ async function logout() {
 /* DATA FETCHING */
 async function fetchAccounts() {
   try {
-    const result = await apiCall('accounts.php');
+    const result = await apiCall('getAccounts');
     if (result && result.success) {
       state.accounts = result.data.accounts;
       renderAccounts();
+    } else {
+      showMessage(dom.accountsList, 'Failed to load accounts');
     }
   } catch (error) {
     console.error('Failed to fetch accounts:', error);
@@ -165,7 +180,7 @@ async function fetchAccounts() {
 
 async function fetchCategories() {
   try {
-    const result = await apiCall('categories.php');
+    const result = await apiCall('getCategories');
     if (result && result.success) {
       state.categories = result.data.categories;
     }
@@ -178,13 +193,19 @@ async function fetchRecords() {
   try {
     showLoading(dom.recordList, 'Loading records...');
     
-    const type = state.ui.recordFilter === 'all' ? '' : `type=${state.ui.recordFilter}`;
-    const result = await apiCall(`records.php${type ? '?' + type : ''}`);
+    let action = 'getRecords';
+    if (state.ui.recordFilter !== 'all') {
+      action += `&type=${state.ui.recordFilter}`;
+    }
+    
+    const result = await apiCall(action);
     
     if (result && result.success) {
       state.records = result.data.records;
       renderRecords();
       updateSummary(result.data.summary);
+    } else {
+      showMessage(dom.recordList, 'Failed to load records');
     }
   } catch (error) {
     console.error('Failed to fetch records:', error);
@@ -194,7 +215,7 @@ async function fetchRecords() {
 
 async function fetchSummary() {
   try {
-    const result = await apiCall('summary.php');
+    const result = await apiCall('getSummary');
     if (result && result.success) {
       updateSummary(result.data.summary);
       renderCharts(result.data.expense_breakdown, result.data.income_breakdown);
@@ -253,7 +274,7 @@ function renderAccounts() {
     li.className = "account";
     li.innerHTML = `
       <span class="account-name">
-        ${acc.icon === 'wallet' ? '💰' : '🏦'} ${acc.name}
+        ${acc.account_type === 'cash' ? '💰' : '🏦'} ${acc.name}
         ${acc.is_default ? '<span class="default-badge">Default</span>' : ''}
       </span>
       <strong>${formatCurrency(acc.balance)}</strong>
@@ -311,7 +332,6 @@ function updateSummary(summary) {
   dom.expenseAmount.textContent = formatCurrency(summary.total_expense || 0);
   dom.totalAmount.textContent = formatCurrency(summary.net_amount || 0);
   
-  // Update total card color based on balance
   const totalCard = dom.totalAmount.closest('.card');
   if (summary.net_amount >= 0) {
     totalCard.classList.remove('negative');
@@ -419,7 +439,7 @@ async function addRecord(amount) {
       data.category_id = null;
     }
 
-    const result = await apiCall('records.php', 'POST', data);
+    const result = await apiCall('addRecord', 'POST', data);
     
     if (result && result.success) {
       state.records.unshift(result.data.record);
@@ -442,7 +462,7 @@ async function deleteRecord(recordId) {
   if (!confirm('Are you sure you want to delete this record?')) return;
   
   try {
-    const result = await apiCall(`records.php?id=${recordId}`, 'DELETE');
+    const result = await apiCall('deleteRecord', 'DELETE', { id: recordId });
     
     if (result && result.success) {
       state.accounts = result.data.accounts;
@@ -468,7 +488,7 @@ async function addAccount() {
   }
 
   try {
-    const result = await apiCall('accounts.php', 'POST', {
+    const result = await apiCall('addAccount', 'POST', {
       name,
       balance,
       account_type: type
@@ -499,7 +519,7 @@ async function addCategory() {
   }
 
   try {
-    const result = await apiCall('categories.php', 'POST', { name, type });
+    const result = await apiCall('addCategory', 'POST', { name, type });
 
     if (result && result.success) {
       state.categories.push(result.data.category);
@@ -522,7 +542,6 @@ document.addEventListener("click", async (e) => {
   if (toggle) {
     toggleOverlay(toggle.dataset.toggle, true);
     
-    // Handle specific overlay needs
     if (toggle.dataset.toggle === 'accountsOverlay') {
       state.ui.selectMode = state.ui.mode === 'transfer' && state.ui.fromAccount ? 'to' : 'from';
     }
@@ -550,23 +569,19 @@ document.addEventListener("click", async (e) => {
     const accountId = e.target.dataset.accountId;
     
     if (state.ui.mode === 'transfer' && state.ui.fromAccount && state.ui.selectMode !== 'from') {
-      // Selecting destination account for transfer
       state.ui.toAccount = accountId;
       const acc = state.accounts.find(a => a.id === accountId);
       $("toText").textContent = acc?.name || "—";
       toggleOverlay("accountsOverlay", false);
       toggleOverlay("transferToOverlay", false);
     } else if (state.ui.mode === 'transfer' && !state.ui.fromAccount) {
-      // Selecting source account for transfer
       state.ui.fromAccount = accountId;
       const acc = state.accounts.find(a => a.id === accountId);
       dom.fromText.textContent = acc?.name || "—";
       toggleOverlay("accountsOverlay", false);
-      // Now show destination selection
       renderTransferToOptions();
       toggleOverlay("transferToOverlay", true);
     } else {
-      // Regular selection
       state.ui.fromAccount = accountId;
       const acc = state.accounts.find(a => a.id === accountId);
       dom.fromText.textContent = acc?.name || "—";

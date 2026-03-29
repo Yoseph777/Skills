@@ -35,17 +35,16 @@
     </div>
 
     <script>
-        // API Configuration
-        const API_BASE = 'api';
+        // API Configuration - Single unified API file
+        const API_FILE = 'api.php';
         
         // Check if already logged in
         document.addEventListener('DOMContentLoaded', async () => {
             try {
-                const response = await fetch(`${API_BASE}/auth.php?action=check`);
+                const response = await fetch(`${API_FILE}?action=check`);
                 const data = await response.json();
                 
                 if (data.success && data.data.authenticated) {
-                    // Already logged in, redirect to dashboard
                     window.location.href = 'index.html';
                 }
             } catch (error) {
@@ -62,43 +61,34 @@
             const errorMessage = document.getElementById('errorMessage');
             const submitBtn = document.querySelector('.submit-btn');
             
-            // Reset error
             errorMessage.classList.add('hidden');
             errorMessage.textContent = '';
             
-            // Validate inputs
             if (!email || !password) {
                 errorMessage.textContent = 'Please fill in all fields.';
                 errorMessage.classList.remove('hidden');
                 return;
             }
             
-            // Disable button and show loading
             submitBtn.disabled = true;
             submitBtn.textContent = 'Logging in...';
             
             try {
-                const response = await fetch(`${API_BASE}/auth.php?action=login`, {
+                const response = await fetch(`${API_FILE}?action=login`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ email, password })
                 });
                 
                 const data = await response.json();
                 
                 if (data.success) {
-                    // Show success message briefly
                     submitBtn.textContent = 'Success!';
                     submitBtn.style.backgroundColor = '#10b981';
-                    
-                    // Redirect to dashboard
                     setTimeout(() => {
                         window.location.href = 'index.html';
                     }, 500);
                 } else {
-                    // Show error
                     errorMessage.textContent = data.message || 'Login failed. Please try again.';
                     errorMessage.classList.remove('hidden');
                     submitBtn.disabled = false;
