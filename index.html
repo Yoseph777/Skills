@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PennyWise</title>
+  <link rel="stylesheet" href="static/css/styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body>
+  <header class="nav">
+    <h1 class="logo">PennyWise</h1>
+    <button class="hamburger-btn" data-toggle="addCategoryOverlay">☰</button>
+  </header>
+
+  <main class="container">
+
+    <section class="summary">
+      <div class="card">
+        <h3>Income</h3>
+        <p class="amount" id="incomeAmount">$0</p>
+      </div>
+
+      <div class="card">
+        <h3>Expense</h3>
+        <p class="amount" id="expenseAmount">$0</p>
+      </div>
+
+      <div class="card">
+        <h3>Total</h3>
+        <p class="amount" id="totalAmount">$0</p>
+      </div>
+    </section>
+
+    <!-- MAIN CONTENT -->
+    <section class="main-content">
+
+      <!-- ===== RECORDS ===== -->
+      <div class="records">
+        <div class="records-header">
+            <div class="record-filter">
+            <label for="recordTypeFilter">Show:</label>
+            <select id="recordTypeFilter">
+                <option value="all">All</option>
+                <option value="income">Income</option>
+                <option value="expense">Expense</option>
+                <option value="transfer">Transfer</option>
+            </select>
+            </div>
+          <button class="btn add-btn" data-toggle="addRecordOverlay">
+            + Add Record
+          </button>
+        </div>
+
+        <ul id="recordList" class="record-list">
+        </ul>
+      </div>
+
+      <!-- ===== ACCOUNTS ===== -->
+      <div class="accounts">
+        <h3>Accounts</h3>
+        <ul id="accountsList"></ul>
+
+        <button
+          class="btn add-account"
+          data-toggle="addAccountOverlay"
+        >
+          + Add New Account
+        </button>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!--  ADD RECORD OVERLAY -->
+  <div id="addRecordOverlay" class="overlay" hidden>
+    <div class="modal">
+
+      <button class="close-btn" data-close>×</button>
+
+      <!-- Record Type -->
+      <div class="mode-buttons">
+        <button data-mode="income">Income</button>
+        <button data-mode="expense">Expense</button>
+        <button data-mode="transfer">Transfer</button>
+      </div>
+
+      <!-- Account / Category -->
+      <div class="selection">
+        <button data-toggle="accountsOverlay">Select Account</button>
+        <button data-toggle="categoriesOverlay">Select Category</button>
+      </div>
+
+      <!-- Selection Summary -->
+      <div class="selection-summary">
+        <p>From: <span id="fromText">—</span></p>
+        <p>To / Category: <span id="toText">—</span></p>
+      </div>
+
+      <!-- Amount Input -->
+      <input type="text" class="display-num" placeholder="0"/>
+
+      <!-- Error -->
+      <p id="formError" class="error hidden"></p>
+
+      <!-- Calculator -->
+      <div class="calc">
+        <button data-key="1">1</button>
+        <button data-key="2">2</button>
+        <button data-key="3">3</button>
+        <button data-key="+">+</button>
+
+        <button data-key="4">4</button>
+        <button data-key="5">5</button>
+        <button data-key="6">6</button>
+        <button data-key="-">-</button>
+
+        <button data-key="7">7</button>
+        <button data-key="8">8</button>
+        <button data-key="9">9</button>
+        <button data-key="*">×</button>
+
+        <button data-action="clear">C</button>
+        <button data-key="0">0</button>
+        <button data-key=".">.</button>
+        <button data-action="calculate">=</button>
+      </div>
+
+      <!-- Save -->
+      <button class="btn save-btn" data-action="save-record">
+        Save Record
+      </button>
+
+    </div>
+  </div>
+
+  <!-- ACCOUNTS OVERLAY -->
+  <div id="accountsOverlay" class="overlay" hidden>
+    <div class="modal">
+      <button class="close-btn" data-close>×</button>
+      <h3>Select Account</h3>
+      <ul id="accountOptions"></ul>
+    </div>
+  </div>
+
+  <!-- ADD ACCOUNT OVERLAY -->
+  <div id="addAccountOverlay" class="overlay" hidden>
+    <div class="modal">
+      <button class="close-btn" data-close>×</button>
+
+      <h3>Add New Account</h3>
+
+      <input
+        type="text"
+        id="accountNameInput"
+        placeholder="Account name"
+      />
+
+      <input
+        type="number"
+        id="accountBalanceInput"
+        placeholder="Initial balance"
+      />
+
+      <button class="btn save-btn" data-action="save-account">
+        Save Account
+      </button>
+    </div>
+  </div>
+
+  <!-- CATEGORIES OVERLAY -->
+  <div id="categoriesOverlay" class="overlay" hidden>
+    <div class="modal">
+      <button class="close-btn" data-close>×</button>
+      <h3>Select Category</h3>
+      <ul id="categoryOptions"></ul>
+    </div>
+  </div>
+
+  <!-- ADD CATEGORY OVERLAY -->
+    <div id="addCategoryOverlay" class="overlay" hidden>
+    <div class="modal">
+        <button class="close-btn" data-close>×</button>
+
+        <h3>Add New Category</h3>
+
+        <input
+        type="text"
+        id="categoryNameInput"
+        placeholder="Category name"
+        />
+
+        <div class="mode-buttons">
+        <button data-category-type="income">Income</button>
+        <button data-category-type="expense">Expense</button>
+        </div>
+
+        <button class="btn save-btn" data-action="save-category">
+        Save Category
+        </button>
+    </div>
+    </div>
+
+   <section class="charts">
+  <div class="chart1">
+    <h3>Expense Breakdown</h3>
+    <ul id="expenseBreakdown"></ul>
+    <canvas id="expenseChart"></canvas>
+  </div>
+
+  <div class="chart2">
+    <h3>Income Breakdown</h3>
+    <ul id="incomeBreakdown"></ul>
+    <canvas id="incomeChart"></canvas>
+  </div>
+</section>
+
+  <script src="static/js/app.js"></script>
+
+</body>
+</html>

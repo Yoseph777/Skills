@@ -1,0 +1,96 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: "Segoe UI", sans-serif;
+}
+
+body {
+    background-color: #2b2a2f;
+    color: #f2f2f2;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.nav {
+    padding: 20px;
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(8px);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+    text-align: center;
+}
+
+.logo {
+    color: #f48c8c;
+    letter-spacing: 2px;
+    font-weight: 600;
+}
+
+.center-wrapper {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex: 1;
+}
+
+.login-form-wrapper {
+    width: 320px;
+    padding: 25px 30px;
+    border: none;
+    background: rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(12px);
+    border-radius: 16px;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
+    color: #fff;
+}
+
+.login-form-wrapper legend {
+    margin: 0 auto;
+    padding: 8px 20px;
+    border-radius: 30px;
+    background: rgba(255,255,255,0.15);
+    backdrop-filter: blur(6px);
+    font-size: 1.1rem;
+    color: #fff;
+    display: inline-block;
+}
+
+.login-form, .register-form{
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+label {
+    font-size: 0.9rem;
+}
+
+input {
+    padding: 10px;
+    border-radius: 8px;
+    border: none;
+    outline: none;
+    background: rgba(255, 255, 255, 0.15);
+    color: #fff;
+}
+
+input::placeholder {
+    color: #e0e0e0;
+}
+
+.submit-btn {
+    padding: 12px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    background: #f48c8c;
+    color: #fff;
+    font-weight: bold;
+    transition: 0.2s;
+}
+
+.submit-btn:hover {
+    background: #f48c51;
+    transform: translateY(-2px);
+}
