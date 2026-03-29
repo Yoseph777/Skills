@@ -3,33 +3,37 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>PennyWise</title>
+  <title>PennyWise - Budget & Expense Tracker</title>
   <link rel="stylesheet" href="static/css/styles.css" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://sites.super.myninja.ai/_assets/ninja-daytona-script.js"></script>
 </head>
 
 <body>
   <header class="nav">
     <h1 class="logo">PennyWise</h1>
-    <button class="hamburger-btn" data-toggle="addCategoryOverlay">☰</button>
+    <div class="nav-right">
+      <span id="userGreeting" class="user-greeting"></span>
+      <button class="hamburger-btn" data-toggle="menuOverlay">☰</button>
+    </div>
   </header>
 
   <main class="container">
 
     <section class="summary">
-      <div class="card">
+      <div class="card income-card">
         <h3>Income</h3>
-        <p class="amount" id="incomeAmount">$0</p>
+        <p class="amount" id="incomeAmount">$0.00</p>
       </div>
 
-      <div class="card">
+      <div class="card expense-card">
         <h3>Expense</h3>
-        <p class="amount" id="expenseAmount">$0</p>
+        <p class="amount" id="expenseAmount">$0.00</p>
       </div>
 
-      <div class="card">
-        <h3>Total</h3>
-        <p class="amount" id="totalAmount">$0</p>
+      <div class="card total-card">
+        <h3>Balance</h3>
+        <p class="amount" id="totalAmount">$0.00</p>
       </div>
     </section>
 
@@ -54,27 +58,53 @@
         </div>
 
         <ul id="recordList" class="record-list">
+          <li class="loading">Loading records...</li>
         </ul>
       </div>
 
       <!-- ===== ACCOUNTS ===== -->
       <div class="accounts">
         <h3>Accounts</h3>
-        <ul id="accountsList"></ul>
+        <ul id="accountsList">
+          <li class="loading">Loading accounts...</li>
+        </ul>
 
-        <button
-          class="btn add-account"
-          data-toggle="addAccountOverlay"
-        >
+        <button class="btn add-account" data-toggle="addAccountOverlay">
           + Add New Account
         </button>
       </div>
 
     </section>
 
+    <!-- CHARTS SECTION -->
+    <section class="charts">
+      <div class="chart1">
+        <h3>Expense Breakdown</h3>
+        <canvas id="expenseChart"></canvas>
+      </div>
+
+      <div class="chart2">
+        <h3>Income Breakdown</h3>
+        <canvas id="incomeChart"></canvas>
+      </div>
+    </section>
+
   </main>
 
-  <!--  ADD RECORD OVERLAY -->
+  <!-- MENU OVERLAY -->
+  <div id="menuOverlay" class="overlay" hidden>
+    <div class="modal menu-modal">
+      <button class="close-btn" data-close>×</button>
+      <h3>Menu</h3>
+      <ul class="menu-list">
+        <li><a href="#" data-action="addCategory">Manage Categories</a></li>
+        <li><a href="#" data-action="export">Export Data</a></li>
+        <li><a href="#" data-action="logout" class="logout-link">Logout</a></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ADD RECORD OVERLAY -->
   <div id="addRecordOverlay" class="overlay" hidden>
     <div class="modal">
 
@@ -83,24 +113,27 @@
       <!-- Record Type -->
       <div class="mode-buttons">
         <button data-mode="income">Income</button>
-        <button data-mode="expense">Expense</button>
+        <button data-mode="expense" class="active">Expense</button>
         <button data-mode="transfer">Transfer</button>
       </div>
 
       <!-- Account / Category -->
       <div class="selection">
-        <button data-toggle="accountsOverlay">Select Account</button>
-        <button data-toggle="categoriesOverlay">Select Category</button>
+        <button data-toggle="accountsOverlay" id="selectAccountBtn">Select Account</button>
+        <button data-toggle="categoriesOverlay" id="selectCategoryBtn">Select Category</button>
       </div>
 
       <!-- Selection Summary -->
       <div class="selection-summary">
         <p>From: <span id="fromText">—</span></p>
-        <p>To / Category: <span id="toText">—</span></p>
+        <p id="toLabel">Category: <span id="toText">—</span></p>
       </div>
 
+      <!-- Description -->
+      <input type="text" id="recordDescription" class="description-input" placeholder="Add description (optional)">
+
       <!-- Amount Input -->
-      <input type="text" class="display-num" placeholder="0"/>
+      <input type="text" class="display-num" placeholder="0" id="amountDisplay" readonly/>
 
       <!-- Error -->
       <p id="formError" class="error hidden"></p>
@@ -141,7 +174,9 @@
     <div class="modal">
       <button class="close-btn" data-close>×</button>
       <h3>Select Account</h3>
-      <ul id="accountOptions"></ul>
+      <ul id="accountOptions" class="select-list">
+        <li class="loading">Loading...</li>
+      </ul>
     </div>
   </div>
 
@@ -152,17 +187,20 @@
 
       <h3>Add New Account</h3>
 
-      <input
-        type="text"
-        id="accountNameInput"
-        placeholder="Account name"
-      />
+      <input type="text" id="accountNameInput" placeholder="Account name (e.g., Cash, Bank Account)" />
 
-      <input
-        type="number"
-        id="accountBalanceInput"
-        placeholder="Initial balance"
-      />
+      <input type="number" id="accountBalanceInput" placeholder="Initial balance" step="0.01" />
+
+      <div class="form-group">
+        <label for="accountType">Account Type:</label>
+        <select id="accountType">
+          <option value="cash">Cash</option>
+          <option value="bank">Bank Account</option>
+          <option value="savings">Savings</option>
+          <option value="credit">Credit Card</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
 
       <button class="btn save-btn" data-action="save-account">
         Save Account
@@ -175,47 +213,42 @@
     <div class="modal">
       <button class="close-btn" data-close>×</button>
       <h3>Select Category</h3>
-      <ul id="categoryOptions"></ul>
+      <ul id="categoryOptions" class="select-list">
+        <li class="loading">Loading...</li>
+      </ul>
     </div>
   </div>
 
   <!-- ADD CATEGORY OVERLAY -->
-    <div id="addCategoryOverlay" class="overlay" hidden>
+  <div id="addCategoryOverlay" class="overlay" hidden>
     <div class="modal">
-        <button class="close-btn" data-close>×</button>
+      <button class="close-btn" data-close>×</button>
 
-        <h3>Add New Category</h3>
+      <h3>Add New Category</h3>
 
-        <input
-        type="text"
-        id="categoryNameInput"
-        placeholder="Category name"
-        />
+      <input type="text" id="categoryNameInput" placeholder="Category name" />
 
-        <div class="mode-buttons">
+      <div class="mode-buttons">
         <button data-category-type="income">Income</button>
-        <button data-category-type="expense">Expense</button>
-        </div>
+        <button data-category-type="expense" class="active">Expense</button>
+      </div>
 
-        <button class="btn save-btn" data-action="save-category">
+      <button class="btn save-btn" data-action="save-category">
         Save Category
-        </button>
+      </button>
     </div>
-    </div>
-
-   <section class="charts">
-  <div class="chart1">
-    <h3>Expense Breakdown</h3>
-    <ul id="expenseBreakdown"></ul>
-    <canvas id="expenseChart"></canvas>
   </div>
 
-  <div class="chart2">
-    <h3>Income Breakdown</h3>
-    <ul id="incomeBreakdown"></ul>
-    <canvas id="incomeChart"></canvas>
+  <!-- TRANSFER DESTINATION OVERLAY -->
+  <div id="transferToOverlay" class="overlay" hidden>
+    <div class="modal">
+      <button class="close-btn" data-close>×</button>
+      <h3>Select Destination Account</h3>
+      <ul id="transferToOptions" class="select-list">
+        <li class="loading">Loading...</li>
+      </ul>
+    </div>
   </div>
-</section>
 
   <script src="static/js/app.js"></script>
 
