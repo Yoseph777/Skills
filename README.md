@@ -124,18 +124,16 @@ C:\xampp\htdocs\pennywise\
 
 ### Step 3: Create Database
 1. Open phpMyAdmin (http://localhost/phpmyadmin)
-2. Click on "SQL" tab
-3. Run the SQL script from `database/schema.sql` or execute:
+2. Click on "Import" tab
+3. Select and import `database/schema.sql`
+4. Or run this SQL:
 ```sql
--- Option 1: Import the schema file
--- Click "Import" and select database/schema.sql
-
--- Option 2: Run this command
 CREATE DATABASE pennywise_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 ```
+Then import the schema file.
 
 ### Step 4: Configure Database Connection
-Edit `config/database.php` if your MySQL credentials differ from defaults:
+Open `api.php` in a text editor and update these lines near the top if your credentials differ:
 ```php
 define('DB_HOST', 'localhost');        // Database host
 define('DB_NAME', 'pennywise_db');     // Database name
@@ -154,66 +152,62 @@ http://localhost/pennywise/login.html
 2. Fill in your details
 3. Start tracking your finances!
 
-## API Endpoints
+## API Endpoints (Unified `api.php`)
 
-### Authentication (`api/auth.php`)
+All API calls go through `api.php?action=[action]`:
 
 | Action | Method | Description |
 |--------|--------|-------------|
-| `?action=register` | POST | Register new user |
-| `?action=login` | POST | Login user |
-| `?action=logout` | GET | Logout user |
-| `?action=check` | GET | Check session status |
-| `?action=user` | GET | Get current user data |
+| `register` | POST | Register new user |
+| `login` | POST | Login user |
+| `logout` | GET/POST | Logout user |
+| `check` | GET | Check session status |
+| `getAccounts` | GET | Get all accounts |
+| `addAccount` | POST | Create new account |
+| `deleteAccount` | DELETE | Delete account |
+| `getCategories` | GET | Get categories (filter: `&type=income/expense`) |
+| `addCategory` | POST | Create new category |
+| `deleteCategory` | DELETE | Delete category |
+| `getRecords` | GET | Get records (filter: `&type=income/expense/transfer`) |
+| `addRecord` | POST | Create new record |
+| `deleteRecord` | DELETE | Delete record |
+| `getSummary` | GET | Get dashboard summary |
 
-### Accounts (`api/accounts.php`)
+### Example API Calls:
+```javascript
+// Login
+fetch('api.php?action=login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: 'user@example.com', password: 'password' })
+});
 
-| Method | Description |
-|--------|-------------|
-| GET | Get all accounts for current user |
-| POST | Create new account |
-| PUT | Update existing account |
-| DELETE | Delete account |
+// Get records
+fetch('api.php?action=getRecords')
+    .then(r => r.json())
+    .then(data => console.log(data));
 
-### Categories (`api/categories.php`)
-
-| Method | Description |
-|--------|-------------|
-| GET | Get all categories (optional `?type=income/expense`) |
-| POST | Create new category |
-| PUT | Update existing category |
-| DELETE | Delete category (soft delete) |
-
-### Records (`api/records.php`)
-
-| Method | Description |
-|--------|-------------|
-| GET | Get records with filtering (`?type=`, `?start_date=`, `?end_date=`) |
-| POST | Create new record (income/expense/transfer) |
-| PUT | Update existing record |
-| DELETE | Delete record |
-
-### Summary (`api/summary.php`)
-
-| Method | Description |
-|--------|-------------|
-| GET | Get dashboard summary and analytics |
+// Add record
+fetch('api.php?action=addRecord', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+        type: 'expense',
+        amount: 50,
+        from_account_id: 'account-uuid',
+        category_id: 'category-uuid',
+        description: 'Groceries'
+    })
+});
+```
 
 ## Project Structure
 
 ```
 pennywise/
-├── api/
-│   ├── auth.php          # Authentication endpoints
-│   ├── accounts.php      # Account CRUD operations
-│   ├── categories.php    # Category CRUD operations
-│   ├── records.php       # Transaction CRUD operations
-│   └── summary.php       # Dashboard summary data
-├── config/
-│   ├── config.php        # Application configuration
-│   └── database.php      # Database connection
+├── api.php               # ⭐ UNIFIED API - All backend operations in one file
 ├── database/
-│   └── schema.sql        # Database schema
+│   └── schema.sql        # Database schema (import this first)
 ├── static/
 │   ├── css/
 │   │   ├── styles.css    # Main stylesheet
@@ -225,6 +219,9 @@ pennywise/
 ├── register.html         # Registration page
 └── README.md             # This file
 ```
+
+### Alternative: Modular API Structure
+For larger applications, you can also use the modular structure in the `api/` and `config/` folders. Both approaches work - use whichever you prefer.
 
 ## Security Features
 
