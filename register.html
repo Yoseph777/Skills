@@ -1,34 +1,133 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Register</title>
+    <title>Register - PennyWise</title>
     <link rel="stylesheet" href="static/css/login.css">
+<script src="https://sites.super.myninja.ai/_assets/ninja-daytona-script.js"></script>
 </head>
 <body>
     <header class="nav">
-        <h1 class="logo">PennyWise</h1>
+        <a href="index.html" class="logo">PennyWise</a>
     </header>
     
     <div class="center-wrapper">
         <fieldset class="login-form-wrapper">
-            <legend>Welcome Back</legend>
+            <legend>Create Account</legend>
 
-            <form action="index.html" method="POST" class="register-form">
+            <form id="registerForm" class="register-form">
                 <label for="username">Username</label>
-                <input type="text" id="username" placeholder="Enter your username" required>
+                <input type="text" id="username" name="username" placeholder="Choose a username" required minlength="3" maxlength="50">
 
                 <label for="email">Email</label>
-                <input class="text" type="email" id="email" placeholder="Enter your email" required>
+                <input type="email" id="email" name="email" placeholder="Enter your email" required>
 
                 <label for="password">Password</label>
-                <input type="password" id="password" placeholder="Enter your password" required>
+                <input type="password" id="password" name="password" placeholder="Create a password" required minlength="6">
+                
+                <label for="confirmPassword">Confirm Password</label>
+                <input type="password" id="confirmPassword" name="confirmPassword" placeholder="Confirm your password" required>
+
+                <div id="errorMessage" class="error-message hidden"></div>
 
                 <button class="submit-btn" type="submit">Register</button>
+                
+                <p class="redirect-text">
+                    Already have an account? <a href="login.html">Login here</a>
+                </p>
             </form>
-
         </fieldset>
     </div>
+
+    <script>
+        // API Configuration - Single unified API file
+        const API_FILE = 'api.php';
+        
+        // Check if already logged in
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                const response = await fetch(`${API_FILE}?action=check`);
+                const data = await response.json();
+                
+                if (data.success && data.data.authenticated) {
+                    window.location.href = 'index.html';
+                }
+            } catch (error) {
+                console.log('Session check failed:', error);
+            }
+        });
+        
+        // Handle form submission
+        document.getElementById('registerForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const username = document.getElementById('username').value.trim();
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            const errorMessage = document.getElementById('errorMessage');
+            const submitBtn = document.querySelector('.submit-btn');
+            
+            errorMessage.classList.add('hidden');
+            errorMessage.textContent = '';
+            
+            if (!username || !email || !password || !confirmPassword) {
+                errorMessage.textContent = 'Please fill in all fields.';
+                errorMessage.classList.remove('hidden');
+                return;
+            }
+            
+            if (username.length < 3 || username.length > 50) {
+                errorMessage.textContent = 'Username must be between 3 and 50 characters.';
+                errorMessage.classList.remove('hidden');
+                return;
+            }
+            
+            if (password.length < 6) {
+                errorMessage.textContent = 'Password must be at least 6 characters.';
+                errorMessage.classList.remove('hidden');
+                return;
+            }
+            
+            if (password !== confirmPassword) {
+                errorMessage.textContent = 'Passwords do not match.';
+                errorMessage.classList.remove('hidden');
+                return;
+            }
+            
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Creating account...';
+            
+            try {
+                const response = await fetch(`${API_FILE}?action=register`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, email, password })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    submitBtn.textContent = 'Success!';
+                    submitBtn.style.backgroundColor = '#10b981';
+                    setTimeout(() => {
+                        window.location.href = 'index.html';
+                    }, 500);
+                } else {
+                    errorMessage.textContent = data.message || 'Registration failed. Please try again.';
+                    errorMessage.classList.remove('hidden');
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Register';
+                }
+            } catch (error) {
+                console.error('Registration error:', error);
+                errorMessage.textContent = 'Connection error. Please check if the server is running.';
+                errorMessage.classList.remove('hidden');
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Register';
+            }
+        });
+    </script>
 </body>
 </html>

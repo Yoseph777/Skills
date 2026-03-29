@@ -94,3 +94,42 @@ input::placeholder {
     background: #f48c51;
     transform: translateY(-2px);
 }
+
+.submit-btn:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.error-message {
+    color: #ff6b6b;
+    font-size: 0.85rem;
+    padding: 8px 0;
+    text-align: center;
+}
+
+.error-message.hidden {
+    display: none;
+}
+
+.redirect-text {
+    text-align: center;
+    margin-top: 15px;
+    font-size: 0.9rem;
+    color: #ccc;
+}
+
+.redirect-text a {
+    color: #f48c8c;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.redirect-text a:hover {
+    text-decoration: underline;
+}
+
+.logo {
+    text-decoration: none;
+    cursor: pointer;
+}

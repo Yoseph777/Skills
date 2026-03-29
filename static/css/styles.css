@@ -373,6 +373,195 @@ input {
 
 
 
+/* MENU & NAVIGATION */
+.nav-right {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.user-greeting {
+  font-size: 0.9rem;
+  color: #ccc;
+}
+
+.menu-modal {
+  max-width: 300px;
+}
+
+.menu-list {
+  list-style: none;
+}
+
+.menu-list li {
+  border-bottom: 1px solid #4a4950;
+}
+
+.menu-list li:last-child {
+  border-bottom: none;
+}
+
+.menu-list a {
+  display: block;
+  padding: 1rem;
+  color: #f2f2f2;
+  text-decoration: none;
+  transition: background-color 0.2s;
+}
+
+.menu-list a:hover {
+  background-color: #4a4950;
+}
+
+.logout-link {
+  color: #ff6b6b !important;
+}
+
+/* FORM ELEMENTS */
+.description-input {
+  width: 100%;
+  background-color: #3d3c42;
+  border: none;
+  border-radius: 8px;
+  padding: 0.8rem;
+  color: #fff;
+  font-size: 0.9rem;
+}
+
+.description-input::placeholder {
+  color: #888;
+}
+
+.form-group {
+  margin-top: 0.5rem;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.3rem;
+  font-size: 0.85rem;
+  color: #ccc;
+}
+
+.form-group select {
+  width: 100%;
+  padding: 0.6rem;
+  border-radius: 8px;
+  border: none;
+  background-color: #3d3c42;
+  color: #fff;
+  cursor: pointer;
+}
+
+/* RECORD ITEMS */
+.record-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.record-category {
+  font-weight: 500;
+}
+
+.record-date {
+  font-size: 0.75rem;
+  color: #888;
+}
+
+.record-amount {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.delete-btn {
+  background: none !important;
+  border: none;
+  color: #666;
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 0 0.3rem;
+  opacity: 0;
+  transition: opacity 0.2s, color 0.2s;
+}
+
+.record:hover .delete-btn {
+  opacity: 1;
+}
+
+.delete-btn:hover {
+  color: #ff6b6b !important;
+}
+
+/* ACCOUNT ITEMS */
+.account-name {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.default-badge {
+  font-size: 0.7rem;
+  background-color: #f48c8c;
+  color: #2b2a2f;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+/* SELECT LIST */
+.select-list {
+  list-style: none;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.select-list button {
+  width: 100%;
+  text-align: left;
+  padding: 0.8rem;
+  margin-bottom: 0.3rem;
+  background-color: #3d3c42;
+  border-radius: 8px;
+  transition: background-color 0.2s;
+}
+
+.select-list button:hover {
+  background-color: #4a4950;
+}
+
+/* LOADING & EMPTY STATES */
+.loading {
+  text-align: center;
+  color: #888;
+  padding: 1rem;
+}
+
+.empty-message {
+  text-align: center;
+  color: #888;
+  padding: 1rem;
+  font-style: italic;
+}
+
+/* CARD STATES */
+.income-card {
+  border-color: #10b981;
+}
+
+.expense-card {
+  border-color: #ef4444;
+}
+
+.total-card.positive {
+  border-color: #10b981;
+}
+
+.total-card.negative {
+  border-color: #ef4444;
+}
+
 /* RESPONSIVE */
 @media (max-width: 700px) {
   .summary {
@@ -385,6 +574,18 @@ input {
 
   .records,
   .accounts {
+    width: 100%;
+  }
+  
+  .user-greeting {
+    display: none;
+  }
+  
+  .charts {
+    flex-direction: column;
+  }
+  
+  .chart1, .chart2 {
     width: 100%;
   }
 }
