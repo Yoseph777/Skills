@@ -1,264 +1,114 @@
-# PennyWise - Budget & Expense Tracker
+| Student Name | ID | Username |
+|--------------|----|----------|
+| Yerosan Bekele     | ETS1449/16 | yer0san |
+| Yoseph Asrat   | ETS1535/16 | yoseph777 |
+| Yonas Demise  | ETS1495/16 | yonas99 |
+| Yonas Zegeye     | ETS1503/16 | yonidevco |
+| Yidnekachew Zerihun   | ETS1455/16 | ofx-yd |
+| Yonas Begashaw  | ETS1494/16 | yonas189 |
 
-A full-stack web application for managing personal finances, tracking expenses, and budgeting. Built with vanilla JavaScript, PHP, and MySQL.
+# PennyWise — Backend API
 
-![PennyWise Logo](static/images/logo.png)
+PHP REST API for PennyWise. Uses nginx + PHP-FPM, MariaDB (or XAMPP instead) and PHPMailer for email verification.
 
-## Features
+## Project structure
 
-- **User Authentication**: Secure registration and login system with password hashing
-- **Account Management**: Create and manage multiple financial accounts (Cash, Bank, Savings, Credit)
-- **Expense Tracking**: Track all your expenses with categories and descriptions
-- **Income Tracking**: Record all sources of income
-- **Transfer Funds**: Transfer money between your accounts
-- **Categories**: Organize transactions with custom categories
-- **Visual Analytics**: Interactive charts showing expense and income breakdown
-- **Dashboard Summary**: Quick overview of your financial status
-- **Responsive Design**: Works on desktop, tablet, and mobile devices
+```
+pennywise_api/
+├── .env                     
+├── .env.example              
+├── composer.json
+├── vendor/
+├── public/
+│   └── index.php                 ← router
+└── src/
+    ├── utils.php                 ← shared helpers (json, validation, auth guard)
+    ├── core/
+    │   └── db.php                ← database connection
+    ├── registrationAndLogging/
+    │   ├── login.php
+    │   ├── register.php
+    │   ├── logout.php
+    │   ├── verify.php
+    │   └── check_auth.php
+    └── controllers/
+        ├── mailService.php
+        ├── expenseController.php
+        ├── incomeController.php
+        ├── transferController.php
+        └── debtController.php
+```
 
-## Technology Stack
+## Requirements
 
-### Frontend
-- **HTML5** - Semantic markup
-- **CSS3** - Modern styling with flexbox and grid
-- **JavaScript (ES6+)** - Vanilla JS with async/await
-- **Chart.js** - Interactive doughnut charts for analytics
+- PHP 8.x
+- nginx + php-fpm (or XAMPP)
+- MariaDB
+- Composer
 
-### Backend
-- **PHP 8.x** - Server-side logic
-- **MySQL/MariaDB** - Relational database
-- **PDO** - Database abstraction layer
-- **Session-based Authentication** - Secure user sessions
+## Setup
 
-### Server Requirements
-- **XAMPP** (Apache, MySQL, PHP) or similar stack
-- PHP 7.4 or higher
-- MySQL 5.7 or higher / MariaDB 10.3 or higher
-- mod_rewrite enabled (for clean URLs)
-
-## Database Schema
-
-The application uses a relational database with the following tables:
-
-### Users Table
-Stores user account information including credentials.
-
-| Column | Type | Description |
-|--------|------|-------------|
-| id | VARCHAR(36) | UUID primary key |
-| username | VARCHAR(50) | Unique username |
-| email | VARCHAR(100) | Unique email address |
-| password | VARCHAR(255) | Bcrypt hashed password |
-| created_at | TIMESTAMP | Account creation date |
-| last_login | TIMESTAMP | Last login timestamp |
-
-### Accounts Table
-User's financial accounts (Cash, Bank, etc.)
-
-| Column | Type | Description |
-|--------|------|-------------|
-| id | VARCHAR(36) | UUID primary key |
-| user_id | VARCHAR(36) | Foreign key to users |
-| name | VARCHAR(100) | Account name |
-| balance | DECIMAL(15,2) | Current balance |
-| account_type | ENUM | cash, bank, credit, savings, other |
-| is_default | BOOLEAN | Default account flag |
-
-### Categories Table
-Income and expense categories
-
-| Column | Type | Description |
-|--------|------|-------------|
-| id | VARCHAR(36) | UUID primary key |
-| user_id | VARCHAR(36) | Foreign key to users |
-| name | VARCHAR(100) | Category name |
-| type | ENUM | income or expense |
-| icon | VARCHAR(50) | Icon identifier |
-| color | VARCHAR(7) | Hex color code |
-
-### Records Table
-All financial transactions
-
-| Column | Type | Description |
-|--------|------|-------------|
-| id | VARCHAR(36) | UUID primary key |
-| user_id | VARCHAR(36) | Foreign key to users |
-| type | ENUM | income, expense, transfer |
-| amount | DECIMAL(15,2) | Transaction amount |
-| category_id | VARCHAR(36) | Foreign key to categories |
-| from_account_id | VARCHAR(36) | Source account |
-| to_account_id | VARCHAR(36) | Destination account (for transfers) |
-| description | VARCHAR(255) | Transaction description |
-| date | DATE | Transaction date |
-
-### Budgets Table
-Budget goals per category
-
-| Column | Type | Description |
-|--------|------|-------------|
-| id | VARCHAR(36) | UUID primary key |
-| user_id | VARCHAR(36) | Foreign key to users |
-| category_id | VARCHAR(36) | Foreign key to categories |
-| amount | DECIMAL(15,2) | Budget amount |
-| period | ENUM | weekly, monthly, yearly |
-
-## Installation Guide
-
-### Prerequisites
-1. Install [XAMPP](https://www.apachefriends.org/) (or similar stack like WAMP, MAMP)
-2. Ensure Apache and MySQL services are running
-
-### Step 1: Clone or Download
+**1. Clone the repo and install dependencies:**
 ```bash
-# If using Git
-git clone https://github.com/Yoseph777/Skills.git
-
-# Or download the ZIP and extract to your XAMPP htdocs folder
+composer install
 ```
 
-### Step 2: Place Files in XAMPP
-Copy all files to your XAMPP htdocs directory:
-```
-C:\xampp\htdocs\pennywise\
-```
-
-### Step 3: Create Database
-1. Open phpMyAdmin (http://localhost/phpmyadmin)
-2. Click on "Import" tab
-3. Select and import `database/schema.sql`
-4. Or run this SQL:
-```sql
-CREATE DATABASE pennywise_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-```
-Then import the schema file.
-
-### Step 4: Configure Database Connection
-Open `api.php` in a text editor and update these lines near the top if your credentials differ:
-```php
-define('DB_HOST', 'localhost');        // Database host
-define('DB_NAME', 'pennywise_db');     // Database name
-define('DB_USER', 'root');             // Database username (default XAMPP: root)
-define('DB_PASS', '');                 // Database password (default XAMPP: empty)
+**2. Create your `.env` file:**
+```bash
+cp .env.example .env
 ```
 
-### Step 5: Access the Application
-Open your browser and navigate to:
-```
-http://localhost/pennywise/login.html
-```
+Then fill in your values:
+```dotenv
+DB_HOST=127.0.0.1
+DB_NAME=your_db_name
+DB_USER=your_db_user
+DB_PASS=your_db_password
+DB_CHARSET=utf8mb4
 
-### Step 6: Register a New Account
-1. Click "Register here" on the login page
-2. Fill in your details
-3. Start tracking your finances!
-
-## API Endpoints (Unified `api.php`)
-
-All API calls go through `api.php?action=[action]`:
-
-| Action | Method | Description |
-|--------|--------|-------------|
-| `register` | POST | Register new user |
-| `login` | POST | Login user |
-| `logout` | GET/POST | Logout user |
-| `check` | GET | Check session status |
-| `getAccounts` | GET | Get all accounts |
-| `addAccount` | POST | Create new account |
-| `deleteAccount` | DELETE | Delete account |
-| `getCategories` | GET | Get categories (filter: `&type=income/expense`) |
-| `addCategory` | POST | Create new category |
-| `deleteCategory` | DELETE | Delete category |
-| `getRecords` | GET | Get records (filter: `&type=income/expense/transfer`) |
-| `addRecord` | POST | Create new record |
-| `deleteRecord` | DELETE | Delete record |
-| `getSummary` | GET | Get dashboard summary |
-
-### Example API Calls:
-```javascript
-// Login
-fetch('api.php?action=login', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email: 'user@example.com', password: 'password' })
-});
-
-// Get records
-fetch('api.php?action=getRecords')
-    .then(r => r.json())
-    .then(data => console.log(data));
-
-// Add record
-fetch('api.php?action=addRecord', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-        type: 'expense',
-        amount: 50,
-        from_account_id: 'account-uuid',
-        category_id: 'category-uuid',
-        description: 'Groceries'
-    })
-});
+MAIL_HOST=smtp.gmail.com
+MAIL_PORT=587
+MAIL_USERNAME=your_email@gmail.com
+MAIL_PASSWORD=your_google_app_password
+MAIL_ENCRYPTION=tls
+MAIL_FROM=your_email@gmail.com
+MAIL_FROM_NAME="PennyWise"
 ```
 
-## Project Structure
-
-```
-pennywise/
-├── api.php               # ⭐ UNIFIED API - All backend operations in one file
-├── database/
-│   └── schema.sql        # Database schema (import this first)
-├── static/
-│   ├── css/
-│   │   ├── styles.css    # Main stylesheet
-│   │   └── login.css     # Login/register styles
-│   └── js/
-│       └── app.js        # Main JavaScript application
-├── index.html            # Main dashboard
-├── login.html            # Login page
-├── register.html         # Registration page
-└── README.md             # This file
+**3. Create the database and run the schema (example with mariadb):**
+```bash
+mariadb -u root -p your_db_name < full_db_schema.sql
 ```
 
-### Alternative: Modular API Structure
-For larger applications, you can also use the modular structure in the `api/` and `config/` folders. Both approaches work - use whichever you prefer.
+**4. Start nginx and php-fpm (or XAMPP) example for nginx adn php-fpm below:**
+```bash
+sudo systemctl start nginx
+sudo systemctl start php-fpm
+```
 
-## Security Features
+The API will be available at `http://localhost`.
 
-- **Password Hashing**: Bcrypt with cost factor 12
-- **SQL Injection Prevention**: PDO prepared statements
-- **XSS Protection**: Input sanitization and output encoding
-- **Session Management**: Secure session handling
-- **CORS Headers**: Configured for API access
+## Auth endpoints
 
-## Future Enhancements
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/register` | Create a new account |
+| POST | `/login` | Sign in |
+| POST | `/logout` | Sign out |
+| GET | `/verify?token=...` | Verify email address |
+| GET | `/check-auth` | Check if session is valid |
 
-- [ ] Budget tracking and alerts
-- [ ] Recurring transactions
-- [ ] Export data to CSV/Excel
-- [ ] Dark/Light theme toggle
-- [ ] Multi-currency support
-- [ ] Financial goals and savings targets
-- [ ] Email notifications
-- [ ] Two-factor authentication
-- [ ] Mobile app (PWA)
+## Email verification
 
-## Contributing
+Registration sends a verification email via Gmail SMTP. The `MAIL_PASSWORD` is a **Google App Password**, not your regular Gmail password.
 
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
+To generate one: Google Account → Security → 2-Step Verification → App Passwords.
 
-## License
+## CORS
 
-This project is open-source and available under the MIT License.
+The API allows requests from the frontend origins:
+- `http://localhost:5500`
+- `http://127.0.0.1:5500`
 
-## Support
+To allow a different origin, update the `$allowedOrigins` array at the top of `public/index.php`.
 
-If you encounter any issues or have questions, please open an issue on GitHub.
-
----
-
-**Built with ❤️ by Yoseph777**
