@@ -9,11 +9,14 @@ const state = {
   records: [],
   accounts: [],
   categories: [],
+  transferCategories: [],
+  debts: [],
   ui: {
     mode: 'expense',
     fromAccount: null,
     toAccount: null,
     category: null,
+    transferCategory: null,
     newCategoryType: 'expense',
     recordFilter: 'all',
     selectMode: 'from' // 'from', 'to', 'category'
@@ -40,7 +43,16 @@ const dom = {
   userGreeting: $("userGreeting"),
   selectAccountBtn: $("selectAccountBtn"),
   selectCategoryBtn: $("selectCategoryBtn"),
-  recordDescription: $("recordDescription")
+  selectTransferCategoryBtn: $("selectTransferCategoryBtn"),
+  recordDescription: $("recordDescription"),
+  // Debt DOM references
+  debtsList: $("debtsList"),
+  debtSummary: $("debtSummary"),
+  debtTotalAmount: $("debtTotalAmount"),
+  debtPaidAmount: $("debtPaidAmount"),
+  debtRemainingAmount: $("debtRemainingAmount"),
+  // Transfer category options
+  transferCategoryOptions: $("transferCategoryOptions")
 };
 
 /* UTILITY FUNCTIONS */
@@ -63,10 +75,12 @@ function resetRecordForm() {
   state.ui.fromAccount = null;
   state.ui.toAccount = null;
   state.ui.category = null;
+  state.ui.transferCategory = null;
   dom.display.value = "";
-  dom.fromText.textContent = "—";
-  dom.toText.textContent = "—";
-  dom.toLabel.innerHTML = 'Category: <span id="toText">—</span>';
+  dom.fromText.textContent = "\u2014";
+  dom.toLabel.innerHTML = 'Category: <span id="toText">\u2014</span>';
+  // Refresh toText DOM reference after innerHTML replacement
+  dom.toText = $("toText");
   dom.recordDescription.value = "";
   setError();
 
@@ -74,20 +88,25 @@ function resetRecordForm() {
     btn.classList.toggle("active", btn.dataset.mode === 'expense');
   });
   
-  // Show category button, hide for transfer
+  // Show category button, hide for transfer; reset transfer category
   dom.selectCategoryBtn.style.display = 'block';
-  updateModeUI();
+  dom.selectTransferCategoryBtn.style.display = 'none';
+  dom.selectTransferCategoryBtn.textContent = 'Transfer Category';
 }
 
 function updateModeUI() {
   const mode = state.ui.mode;
   if (mode === 'transfer') {
     dom.selectCategoryBtn.style.display = 'none';
+    dom.selectTransferCategoryBtn.style.display = 'block';
     dom.toLabel.innerHTML = 'To: <span id="toText">—</span>';
   } else {
     dom.selectCategoryBtn.style.display = 'block';
+    dom.selectTransferCategoryBtn.style.display = 'none';
     dom.toLabel.innerHTML = 'Category: <span id="toText">—</span>';
   }
+  // Refresh toText DOM reference after innerHTML replacement
+  dom.toText = $("toText");
 }
 
 function showLoading(element, message = 'Loading...') {
@@ -174,6 +193,33 @@ async function fetchCategories() {
   }
 }
 
+
+async function fetchTransferCategories() {
+  try {
+    const result = await apiCall('transfer-categories.php');
+    if (result && result.success) {
+      state.transferCategories = result.data.categories;
+    }
+  } catch (error) {
+    console.error('Failed to fetch transfer categories:', error);
+  }
+}
+
+async function fetchDebts() {
+  try {
+    showLoading(dom.debtsList, 'Loading debts...');
+    const result = await apiCall('debts.php');
+    if (result && result.success) {
+      state.debts = result.data.debts;
+      renderDebts();
+      updateDebtSummary(result.data.summary);
+    }
+  } catch (error) {
+    console.error('Failed to fetch debts:', error);
+    showMessage(dom.debtsList, 'Failed to load debts');
+  }
+}
+
 async function fetchRecords() {
   try {
     showLoading(dom.recordList, 'Loading records...');
@@ -224,10 +270,13 @@ function renderRecords() {
     const date = new Date(r.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
     const sign = r.type === "expense" ? "-" : "+";
     
+    const transferCatLabel = r.type === 'transfer' && r.transfer_category_name 
+      ? '<span class="transfer-category-label">' + r.transfer_category_name + '</span>' : '';
     li.innerHTML = `
       <div class="record-info">
-        <span class="record-category">${r.category_name || r.description || r.type}</span>
+        <span class="record-category">${r.category_name || r.transfer_category_name || r.description || r.type}</span>
         <span class="record-date">${date}</span>
+        ${transferCatLabel}
       </div>
       <div class="record-amount">
         <strong>${sign}${formatCurrency(r.amount)}</strong>
@@ -284,6 +333,84 @@ function renderCategories() {
     btn.textContent = c.name;
     btn.dataset.categoryId = c.id;
     dom.categoryOptions.appendChild(btn);
+  });
+}
+
+function renderDebts() {
+  dom.debtsList.innerHTML = "";
+
+  if (!state.debts.length) {
+    dom.debtsList.classList.add("empty");
+    dom.debtsList.innerHTML = "<li class='empty-message'>No debts yet. Add a debt or loan to track!</li>";
+    dom.debtSummary.hidden = true;
+    return;
+  }
+
+  dom.debtsList.classList.remove("empty");
+  dom.debtSummary.hidden = false;
+
+  state.debts.forEach(debt => {
+    const li = document.createElement("li");
+    const isPaidOff = debt.remaining <= 0;
+    li.className = "debt-item" + (isPaidOff ? " paid-off" : "");
+    li.dataset.id = debt.id;
+    
+    const dueDate = debt.due_date ? new Date(debt.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+    const progress = debt.amount > 0 ? Math.round((debt.paid / debt.amount) * 100) : 0;
+    
+    li.innerHTML = `
+      <div class="debt-info">
+        <span class="debt-name">${debt.name}</span>
+        <span class="debt-account">${debt.account_name || 'Unknown account'}</span>
+        ${dueDate ? '<span class="debt-due">Due: ' + dueDate + '</span>' : ''}
+      </div>
+      <div class="debt-amounts">
+        <span class="debt-remaining-amount">${formatCurrency(debt.remaining)}</span>
+        <span class="debt-progress">${formatCurrency(debt.paid)} / ${formatCurrency(debt.amount)} (${progress}%)</span>
+      </div>
+      <div class="debt-actions">
+        <button class="debt-action-btn pay-btn" data-action="pay-debt" data-debt-id="${debt.id}" title="Record payment">↑</button>
+        <button class="debt-action-btn edit-btn" data-action="edit-debt" data-debt-id="${debt.id}" title="Edit">✎</button>
+        <button class="debt-action-btn delete-btn" data-action="delete-debt" data-debt-id="${debt.id}" title="Delete">×</button>
+      </div>
+    `;
+    dom.debtsList.appendChild(li);
+  });
+}
+
+function updateDebtSummary(summary) {
+  if (!summary) return;
+  dom.debtTotalAmount.textContent = formatCurrency(summary.total_debt || 0);
+  dom.debtPaidAmount.textContent = formatCurrency(summary.total_paid || 0);
+  dom.debtRemainingAmount.textContent = formatCurrency(summary.total_remaining || 0);
+}
+
+function renderTransferCategories() {
+  if (!dom.transferCategoryOptions) return;
+  dom.transferCategoryOptions.innerHTML = "";
+
+  if (!state.transferCategories.length) {
+    dom.transferCategoryOptions.innerHTML = "<li class='empty-message'>No transfer categories</li>";
+    return;
+  }
+
+  state.transferCategories.forEach(tc => {
+    const btn = document.createElement("button");
+    btn.textContent = tc.name;
+    btn.dataset.transferCategoryId = tc.id;
+    dom.transferCategoryOptions.appendChild(btn);
+  });
+}
+
+function populateDebtAccountSelect() {
+  const select = document.getElementById("debtAccountSelect");
+  if (!select) return;
+  select.innerHTML = '<option value="">Select account</option>';
+  state.accounts.forEach(acc => {
+    const option = document.createElement("option");
+    option.value = acc.id;
+    option.textContent = acc.name + ' (' + formatCurrency(acc.balance) + ')';
+    select.appendChild(option);
   });
 }
 
@@ -410,6 +537,7 @@ async function addRecord(amount) {
       amount: amount,
       from_account_id: fromAccount,
       category_id: category?.id || null,
+      transfer_category_id: mode === 'transfer' ? (state.ui.transferCategory?.id || null) : null,
       description: dom.recordDescription.value.trim() || null,
       date: new Date().toISOString().split('T')[0]
     };
@@ -515,6 +643,180 @@ async function addCategory() {
   }
 }
 
+/* DEBT CRUD OPERATIONS */
+async function addDebt() {
+  const name = document.getElementById("debtNameInput").value.trim();
+  const amount = parseFloat(document.getElementById("debtAmountInput").value) || 0;
+  const accountId = document.getElementById("debtAccountSelect").value;
+  const dueDate = document.getElementById("debtDueDateInput").value;
+  const notes = document.getElementById("debtNotesInput").value.trim();
+
+  if (!name) {
+    alert("Please enter a debt name.");
+    return;
+  }
+  if (amount <= 0) {
+    alert("Please enter a valid amount.");
+    return;
+  }
+  if (!accountId) {
+    alert("Please select an account to credit the borrowed amount.");
+    return;
+  }
+
+  try {
+    const result = await apiCall('debts.php', 'POST', {
+      name,
+      amount,
+      account_id: accountId,
+      due_date: dueDate || null,
+      notes: notes || null
+    });
+
+    if (result && result.success) {
+      state.debts = [result.data.debt, ...state.debts.filter(d => d.id !== result.data.debt.id)];
+      state.accounts = result.data.accounts;
+      renderDebts();
+      renderAccounts();
+      toggleOverlay("addDebtOverlay", false);
+      // Clear form
+      document.getElementById("debtNameInput").value = "";
+      document.getElementById("debtAmountInput").value = "";
+      document.getElementById("debtDueDateInput").value = "";
+      document.getElementById("debtNotesInput").value = "";
+    } else {
+      alert(result?.message || 'Failed to add debt.');
+    }
+  } catch (error) {
+    console.error('Add debt error:', error);
+    alert('Failed to add debt.');
+  }
+}
+
+async function updateDebt() {
+  const debtId = document.getElementById("editDebtId").value;
+  const paid = parseFloat(document.getElementById("editDebtPaidInput").value) || 0;
+  const name = document.getElementById("editDebtNameInput").value.trim();
+  const dueDate = document.getElementById("editDebtDueDateInput").value;
+  const notes = document.getElementById("editDebtNotesInput").value.trim();
+
+  if (!debtId) return;
+
+  try {
+    const data = { id: debtId };
+    if (name) data.name = name;
+    if (paid >= 0) data.paid = paid;
+    if (dueDate !== undefined) data.due_date = dueDate || null;
+    if (notes !== undefined) data.notes = notes || null;
+
+    const result = await apiCall('debts.php', 'PUT', data);
+
+    if (result && result.success) {
+      state.debts = state.debts.map(d => d.id === debtId ? result.data.debt : d);
+      state.accounts = result.data.accounts;
+      renderDebts();
+      renderAccounts();
+      toggleOverlay("editDebtOverlay", false);
+    } else {
+      alert(result?.message || 'Failed to update debt.');
+    }
+  } catch (error) {
+    console.error('Update debt error:', error);
+    alert('Failed to update debt.');
+  }
+}
+
+async function deleteDebt(debtId) {
+  if (!confirm('Are you sure you want to delete this debt? The remaining balance will be reversed from the linked account.')) return;
+
+  try {
+    const result = await apiCall('debts.php?id=' + debtId, 'DELETE');
+    if (result && result.success) {
+      state.accounts = result.data.accounts;
+      await fetchDebts();
+      renderAccounts();
+    } else {
+      alert(result?.message || 'Failed to delete debt.');
+    }
+  } catch (error) {
+    console.error('Delete debt error:', error);
+    alert('Failed to delete debt.');
+  }
+}
+
+function openEditDebtModal(debtId) {
+  const debt = state.debts.find(d => d.id === debtId);
+  if (!debt) return;
+
+  document.getElementById("editDebtId").value = debt.id;
+  document.getElementById("editDebtNameInput").value = debt.name || '';
+  document.getElementById("editDebtPaidInput").value = debt.paid || 0;
+  document.getElementById("editDebtDueDateInput").value = debt.due_date || '';
+  document.getElementById("editDebtNotesInput").value = debt.notes || '';
+
+  toggleOverlay("editDebtOverlay", true);
+}
+
+function openPayDebtModal(debtId) {
+  const debt = state.debts.find(d => d.id === debtId);
+  if (!debt) return;
+
+  // Quick pay: just increment the paid amount
+  const remaining = debt.amount - debt.paid;
+  const paymentStr = prompt('Enter payment amount (Remaining: ' + formatCurrency(remaining) + '):', '');
+  if (paymentStr === null) return;
+  const payment = parseFloat(paymentStr);
+  if (isNaN(payment) || payment <= 0) {
+    alert('Please enter a valid payment amount.');
+    return;
+  }
+
+  const newPaid = Math.min(debt.paid + payment, debt.amount);
+
+  apiCall('debts.php', 'PUT', { id: debtId, paid: newPaid })
+    .then(result => {
+      if (result && result.success) {
+        state.debts = state.debts.map(d => d.id === debtId ? result.data.debt : d);
+        state.accounts = result.data.accounts;
+        renderDebts();
+        renderAccounts();
+      } else {
+        alert(result?.message || 'Failed to record payment.');
+      }
+    })
+    .catch(error => {
+      console.error('Pay debt error:', error);
+      alert('Failed to record payment.');
+    });
+}
+
+/* EXPORT RECORDS */
+async function exportRecords() {
+  try {
+    // Use fetch directly to get CSV as blob (not JSON)
+    const response = await fetch('api/records.php?action=export', {
+      credentials: 'include'
+    });
+    
+    if (!response.ok) {
+      throw new Error('Export failed');
+    }
+    
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'pennywise_records_' + new Date().toISOString().split('T')[0] + '.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+  } catch (error) {
+    console.error('Export error:', error);
+    alert('Failed to export records. Please try again.');
+  }
+}
+
 /* EVENT HANDLERS */
 document.addEventListener("click", async (e) => {
 
@@ -525,6 +827,12 @@ document.addEventListener("click", async (e) => {
     // Handle specific overlay needs
     if (toggle.dataset.toggle === 'accountsOverlay') {
       state.ui.selectMode = state.ui.mode === 'transfer' && state.ui.fromAccount ? 'to' : 'from';
+    }
+    if (toggle.dataset.toggle === 'addDebtOverlay') {
+      populateDebtAccountSelect();
+    }
+    if (toggle.dataset.toggle === 'transferCategoryOverlay') {
+      renderTransferCategories();
     }
     return;
   }
@@ -591,6 +899,15 @@ document.addEventListener("click", async (e) => {
     return;
   }
 
+  if (e.target.dataset.transferCategoryId) {
+    state.ui.transferCategory = state.transferCategories.find(tc => tc.id === e.target.dataset.transferCategoryId);
+    if (dom.selectTransferCategoryBtn) {
+      dom.selectTransferCategoryBtn.textContent = state.ui.transferCategory?.name || "Transfer Category";
+    }
+    toggleOverlay("transferCategoryOverlay", false);
+    return;
+  }
+
   if (e.target.dataset.categoryType) {
     state.ui.newCategoryType = e.target.dataset.categoryType;
     document.querySelectorAll("[data-category-type]").forEach(btn =>
@@ -601,6 +918,39 @@ document.addEventListener("click", async (e) => {
 
   if (e.target.dataset.action === "save-category") {
     await addCategory();
+    return;
+  }
+
+  // Debt actions
+  if (e.target.dataset.action === "save-debt") {
+    await addDebt();
+    return;
+  }
+
+  if (e.target.dataset.action === "update-debt") {
+    await updateDebt();
+    return;
+  }
+
+  if (e.target.dataset.action === "edit-debt") {
+    openEditDebtModal(e.target.dataset.debtId);
+    return;
+  }
+
+  if (e.target.dataset.action === "delete-debt") {
+    await deleteDebt(e.target.dataset.debtId);
+    return;
+  }
+
+  if (e.target.dataset.action === "pay-debt") {
+    openPayDebtModal(e.target.dataset.debtId);
+    return;
+  }
+
+  // Export action
+  if (e.target.dataset.action === "export") {
+    toggleOverlay('menuOverlay', false);
+    await exportRecords();
     return;
   }
 
@@ -681,7 +1031,9 @@ async function init() {
   await Promise.all([
     fetchAccounts(),
     fetchCategories(),
-    fetchRecords()
+    fetchTransferCategories(),
+    fetchRecords(),
+    fetchDebts()
   ]);
   
   await fetchSummary();

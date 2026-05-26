@@ -19,6 +19,14 @@ $input = json_decode(file_get_contents('php://input'), true) ?? $_POST;
 // Require authentication for all record operations
 requireAuth();
 
+// Check for export action via query param
+$action = $_GET['action'] ?? '';
+
+if ($method === 'GET' && $action === 'export') {
+    handleExportRecords();
+    exit;
+}
+
 /**
  * Route requests based on method
  */
@@ -63,10 +71,12 @@ function handleGetRecords() {
         // Build query
         $sql = "SELECT r.*, 
                     c.name as category_name, c.icon as category_icon, c.color as category_color,
+                    tc.name as transfer_category_name, tc.icon as transfer_category_icon, tc.color as transfer_category_color,
                     fa.name as from_account_name,
                     ta.name as to_account_name
                 FROM records r
                 LEFT JOIN categories c ON r.category_id = c.id
+                LEFT JOIN transfer_categories tc ON r.transfer_category_id = tc.id
                 LEFT JOIN accounts fa ON r.from_account_id = fa.id
                 LEFT JOIN accounts ta ON r.to_account_id = ta.id
                 WHERE r.user_id = ?";
@@ -100,7 +110,7 @@ function handleGetRecords() {
         }
         
         // Get total count
-        $countSql = str_replace("r.*, c.name as category_name, c.icon as category_icon, c.color as category_color, fa.name as from_account_name, ta.name as to_account_name", "COUNT(*) as total", $sql);
+        $countSql = str_replace("r.*, c.name as category_name, c.icon as category_icon, c.color as category_color, tc.name as transfer_category_name, tc.icon as transfer_category_icon, tc.color as transfer_category_color, fa.name as from_account_name, ta.name as to_account_name", "COUNT(*) as total", $sql);
         $stmt = $db->prepare($countSql);
         $stmt->execute($params);
         $totalCount = $stmt->fetch()['total'];
@@ -136,6 +146,94 @@ function handleGetRecords() {
     } catch (PDOException $e) {
         error_log("Get records error: " . $e->getMessage());
         jsonResponse(false, null, 'Failed to retrieve records.', 500);
+    }
+}
+
+/**
+ * Export records as CSV
+ */
+function handleExportRecords() {
+    try {
+        $db = getDB();
+        $userId = getCurrentUserId();
+        
+        // Filters (same as GET records)
+        $type = $_GET['type'] ?? null;
+        $startDate = $_GET['start_date'] ?? null;
+        $endDate = $_GET['end_date'] ?? null;
+        
+        $sql = "SELECT r.type, r.id, r.amount, r.date, r.description,
+                    c.name as category,
+                    tc.name as transfer_category,
+                    fa.name as from_account,
+                    ta.name as to_account
+                FROM records r
+                LEFT JOIN categories c ON r.category_id = c.id
+                LEFT JOIN transfer_categories tc ON r.transfer_category_id = tc.id
+                LEFT JOIN accounts fa ON r.from_account_id = fa.id
+                LEFT JOIN accounts ta ON r.to_account_id = ta.id
+                WHERE r.user_id = ?";
+        
+        $params = [$userId];
+        
+        if ($type && in_array($type, ['income', 'expense', 'transfer'])) {
+            $sql .= " AND r.type = ?";
+            $params[] = $type;
+        }
+        
+        if ($startDate) {
+            $sql .= " AND r.date >= ?";
+            $params[] = $startDate;
+        }
+        
+        if ($endDate) {
+            $sql .= " AND r.date <= ?";
+            $params[] = $endDate;
+        }
+        
+        $sql .= " ORDER BY r.date DESC, r.created_at DESC";
+        
+        $stmt = $db->prepare($sql);
+        $stmt->execute($params);
+        $records = $stmt->fetchAll();
+        
+        // Set headers for CSV download
+        $filename = 'pennywise_records_' . date('Y-m-d') . '.csv';
+        header('Content-Type: text/csv; charset=utf-8');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        header('Pragma: no-cache');
+        header('Expires: 0');
+        
+        // Open output stream
+        $output = fopen('php://output', 'w');
+        
+        // CSV headers
+        fputcsv($output, ['type', 'id', 'amount', 'date', 'category', 'transfer_category', 'account', 'description']);
+        
+        // CSV rows
+        foreach ($records as $record) {
+            $account = $record['type'] === 'transfer' 
+                ? $record['from_account'] . ' → ' . $record['to_account']
+                : $record['from_account'];
+            
+            fputcsv($output, [
+                $record['type'],
+                $record['id'],
+                (float)$record['amount'],
+                $record['date'],
+                $record['category'] ?? '',
+                $record['transfer_category'] ?? '',
+                $account ?? '',
+                $record['description'] ?? ''
+            ]);
+        }
+        
+        fclose($output);
+        exit;
+        
+    } catch (PDOException $e) {
+        error_log("Export records error: " . $e->getMessage());
+        jsonResponse(false, null, 'Failed to export records.', 500);
     }
 }
 
@@ -193,6 +291,7 @@ function handleCreateRecord($input) {
     $type = sanitize($input['type'] ?? '');
     $amount = floatval($input['amount'] ?? 0);
     $categoryId = sanitize($input['category_id'] ?? null);
+    $transferCategoryId = sanitize($input['transfer_category_id'] ?? null);
     $fromAccountId = sanitize($input['from_account_id'] ?? null);
     $toAccountId = sanitize($input['to_account_id'] ?? null);
     $description = sanitize($input['description'] ?? '');
@@ -263,6 +362,15 @@ function handleCreateRecord($input) {
             }
         }
         
+        // Verify transfer category if provided
+        if ($transferCategoryId) {
+            $stmt = $db->prepare("SELECT * FROM transfer_categories WHERE id = ? AND user_id = ?");
+            $stmt->execute([$transferCategoryId, $userId]);
+            if (!$stmt->fetch()) {
+                $transferCategoryId = null;
+            }
+        }
+        
         // Begin transaction
         $db->beginTransaction();
         
@@ -271,10 +379,10 @@ function handleCreateRecord($input) {
         
         // Insert record
         $stmt = $db->prepare("
-            INSERT INTO records (id, user_id, type, amount, category_id, from_account_id, to_account_id, description, date, created_at) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+            INSERT INTO records (id, user_id, type, amount, category_id, transfer_category_id, from_account_id, to_account_id, description, date, created_at) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
         ");
-        $stmt->execute([$recordId, $userId, $type, $amount, $categoryId, $fromAccountId, $toAccountId, $description, $date]);
+        $stmt->execute([$recordId, $userId, $type, $amount, $categoryId, $transferCategoryId, $fromAccountId, $toAccountId, $description, $date]);
         
         // Update account balances
         if ($type === 'income') {
@@ -297,9 +405,11 @@ function handleCreateRecord($input) {
         // Fetch the created record with related data
         $stmt = $db->prepare("
             SELECT r.*, c.name as category_name, c.icon as category_icon, c.color as category_color,
+                   tc.name as transfer_category_name, tc.icon as transfer_category_icon, tc.color as transfer_category_color,
                    fa.name as from_account_name, ta.name as to_account_name
             FROM records r
             LEFT JOIN categories c ON r.category_id = c.id
+            LEFT JOIN transfer_categories tc ON r.transfer_category_id = tc.id
             LEFT JOIN accounts fa ON r.from_account_id = fa.id
             LEFT JOIN accounts ta ON r.to_account_id = ta.id
             WHERE r.id = ?
@@ -338,6 +448,7 @@ function handleUpdateRecord($input) {
     $recordId = sanitize($input['id'] ?? '');
     $amount = isset($input['amount']) ? floatval($input['amount']) : null;
     $categoryId = sanitize($input['category_id'] ?? null);
+    $transferCategoryId = sanitize($input['transfer_category_id'] ?? null);
     $description = isset($input['description']) ? sanitize($input['description']) : null;
     $date = isset($input['date']) ? sanitize($input['date']) : null;
     
@@ -392,6 +503,11 @@ function handleUpdateRecord($input) {
             $params[] = $categoryId ?: null;
         }
         
+        if ($transferCategoryId !== null) {
+            $updates[] = 'transfer_category_id = ?';
+            $params[] = $transferCategoryId ?: null;
+        }
+        
         if ($description !== null) {
             $updates[] = 'description = ?';
             $params[] = $description;
@@ -425,9 +541,11 @@ function handleUpdateRecord($input) {
         // Fetch updated record
         $stmt = $db->prepare("
             SELECT r.*, c.name as category_name, c.icon as category_icon, c.color as category_color,
+                   tc.name as transfer_category_name, tc.icon as transfer_category_icon, tc.color as transfer_category_color,
                    fa.name as from_account_name, ta.name as to_account_name
             FROM records r
             LEFT JOIN categories c ON r.category_id = c.id
+            LEFT JOIN transfer_categories tc ON r.transfer_category_id = tc.id
             LEFT JOIN accounts fa ON r.from_account_id = fa.id
             LEFT JOIN accounts ta ON r.to_account_id = ta.id
             WHERE r.id = ?

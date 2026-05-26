@@ -74,6 +74,31 @@
         </button>
       </div>
 
+      <!-- ===== DEBTS ===== -->
+      <div class="debts-section">
+        <div class="debts-header">
+          <h3>Debts & Loans</h3>
+          <button class="btn add-btn" data-toggle="addDebtOverlay">+ Add Debt</button>
+        </div>
+        <ul id="debtsList" class="debt-list">
+          <li class="loading">Loading debts...</li>
+        </ul>
+        <div id="debtSummary" class="debt-summary" hidden>
+          <div class="card debt-total">
+            <h4>Total Debt</h4>
+            <p class="amount" id="debtTotalAmount">$0.00</p>
+          </div>
+          <div class="card debt-paid">
+            <h4>Paid</h4>
+            <p class="amount" id="debtPaidAmount">$0.00</p>
+          </div>
+          <div class="card debt-remaining">
+            <h4>Remaining</h4>
+            <p class="amount" id="debtRemainingAmount">$0.00</p>
+          </div>
+        </div>
+      </div>
+
     </section>
 
     <!-- CHARTS SECTION -->
@@ -121,6 +146,7 @@
       <div class="selection">
         <button data-toggle="accountsOverlay" id="selectAccountBtn">Select Account</button>
         <button data-toggle="categoriesOverlay" id="selectCategoryBtn">Select Category</button>
+        <button data-toggle="transferCategoryOverlay" id="selectTransferCategoryBtn" style="display:none">Transfer Category</button>
       </div>
 
       <!-- Selection Summary -->
@@ -245,6 +271,65 @@
       <button class="close-btn" data-close>×</button>
       <h3>Select Destination Account</h3>
       <ul id="transferToOptions" class="select-list">
+        <li class="loading">Loading...</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ADD DEBT OVERLAY -->
+  <div id="addDebtOverlay" class="overlay" hidden>
+    <div class="modal">
+      <button class="close-btn" data-close>×</button>
+      <h3>Add Debt / Loan</h3>
+
+      <input type="text" id="debtNameInput" placeholder="Debt name (e.g., Student Loan, Car Loan)" />
+
+      <input type="number" id="debtAmountInput" placeholder="Total amount borrowed" step="0.01" min="0.01" />
+
+      <div class="form-group">
+        <label for="debtAccountSelect">Credit to Account:</label>
+        <select id="debtAccountSelect">
+          <option value="">Select account</option>
+        </select>
+      </div>
+
+      <input type="date" id="debtDueDateInput" placeholder="Due date (optional)" />
+
+      <textarea id="debtNotesInput" placeholder="Notes (optional)" rows="2"></textarea>
+
+      <button class="btn save-btn" data-action="save-debt">
+        Save Debt
+      </button>
+    </div>
+  </div>
+
+  <!-- EDIT DEBT OVERLAY -->
+  <div id="editDebtOverlay" class="overlay" hidden>
+    <div class="modal">
+      <button class="close-btn" data-close>×</button>
+      <h3>Edit Debt</h3>
+
+      <input type="hidden" id="editDebtId" />
+      <input type="text" id="editDebtNameInput" placeholder="Debt name" />
+
+      <input type="number" id="editDebtPaidInput" placeholder="Amount paid so far" step="0.01" min="0" />
+
+      <input type="date" id="editDebtDueDateInput" />
+
+      <textarea id="editDebtNotesInput" placeholder="Notes (optional)" rows="2"></textarea>
+
+      <button class="btn save-btn" data-action="update-debt">
+        Update Debt
+      </button>
+    </div>
+  </div>
+
+  <!-- TRANSFER CATEGORY OVERLAY (shown when adding transfer) -->
+  <div id="transferCategoryOverlay" class="overlay" hidden>
+    <div class="modal">
+      <button class="close-btn" data-close>×</button>
+      <h3>Transfer Category</h3>
+      <ul id="transferCategoryOptions" class="select-list">
         <li class="loading">Loading...</li>
       </ul>
     </div>
