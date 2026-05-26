@@ -83,6 +83,7 @@ input {
   display: flex;
   gap: 1rem;
   margin: 1rem 2rem;
+  flex-wrap: wrap;
 }
 
 /* RECORDS */
@@ -91,7 +92,7 @@ input {
   background-color: #3d3c42;
   padding: 1rem;
   border-radius: 14px;
-  flex: 1;
+  flex: 1 1 300px;
 }
 
 .records-header {
@@ -573,7 +574,8 @@ input {
   }
 
   .records,
-  .accounts {
+  .accounts,
+  .debts-section {
     width: 100%;
   }
   
@@ -588,4 +590,188 @@ input {
   .chart1, .chart2 {
     width: 100%;
   }
+}
+
+/* ===== DEBTS SECTION ===== */
+.debts-section {
+  background-color: #3d3c42;
+  padding: 1rem;
+  border-radius: 14px;
+  margin-top: 1rem;
+  flex: 1 1 300px;
+}
+
+.debts-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.8rem;
+}
+
+.debts-header h3 {
+  color: #f2f2f2;
+}
+
+.debt-list {
+  list-style: none;
+}
+
+.debt-list .empty-message {
+  text-align: center;
+  color: #888;
+  padding: 1rem;
+  font-style: italic;
+}
+
+.debt-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #2b2a2f;
+  padding: 0.7rem 0.9rem;
+  border-radius: 8px;
+  margin-bottom: 0.5rem;
+  border-left: 3px solid #f59e0b;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.debt-item.paid-off {
+  border-left-color: #10b981;
+  opacity: 0.7;
+}
+
+.debt-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.debt-name {
+  font-weight: 500;
+  color: #f2f2f2;
+}
+
+.debt-account {
+  font-size: 0.75rem;
+  color: #888;
+}
+
+.debt-due {
+  font-size: 0.75rem;
+  color: #f59e0b;
+}
+
+.debt-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.debt-amounts {
+  text-align: right;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.debt-remaining-amount {
+  font-weight: 700;
+  color: #f59e0b;
+  font-size: 1.05rem;
+}
+
+.debt-progress {
+  font-size: 0.75rem;
+  color: #888;
+}
+
+.debt-action-btn {
+  background: none !important;
+  border: none;
+  color: #666;
+  font-size: 0.9rem;
+  cursor: pointer;
+  padding: 0 0.3rem;
+  opacity: 0;
+  transition: opacity 0.2s, color 0.2s;
+}
+
+.debt-item:hover .debt-action-btn {
+  opacity: 1;
+}
+
+.debt-action-btn:hover {
+  color: #f48c8c !important;
+}
+
+.debt-action-btn.pay-btn:hover {
+  color: #10b981 !important;
+}
+
+.debt-summary {
+  display: flex;
+  gap: 0.8rem;
+  margin-top: 0.8rem;
+}
+
+.debt-summary .card {
+  padding: 0.8rem;
+  border-radius: 8px;
+}
+
+.debt-summary .card h4 {
+  font-size: 0.75rem;
+  font-weight: 500;
+  margin-bottom: 0.2rem;
+}
+
+.debt-summary .amount {
+  font-size: 1.2rem;
+}
+
+.debt-total {
+  border-color: #ef4444;
+}
+
+.debt-paid {
+  border-color: #10b981;
+}
+
+.debt-remaining {
+  border-color: #f59e0b;
+}
+
+/* Debt modal inputs */
+#addDebtOverlay input,
+#addDebtOverlay textarea,
+#editDebtOverlay input,
+#editDebtOverlay textarea {
+  width: 100%;
+  background-color: #3d3c42;
+  color: #fff;
+  border: none;
+  padding: 0.6rem 0.8rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+}
+
+#addDebtOverlay textarea,
+#editDebtOverlay textarea {
+  resize: vertical;
+  min-height: 50px;
+}
+
+#addDebtOverlay input::placeholder,
+#addDebtOverlay textarea::placeholder,
+#editDebtOverlay input::placeholder,
+#editDebtOverlay textarea::placeholder {
+  color: #888;
+}
+
+/* Transfer category label in record display */
+.transfer-category-label {
+  font-size: 0.75rem;
+  color: #8b5cf6;
+  margin-top: 2px;
 }

@@ -63,8 +63,49 @@ CREATE TABLE IF NOT EXISTS categories (
 ) ENGINE=InnoDB;
 
 -- ============================================
+-- TRANSFER CATEGORIES TABLE
+-- Stores categories specific to transfers
+-- Must be created BEFORE records table (FK dependency)
+-- ============================================
+CREATE TABLE IF NOT EXISTS transfer_categories (
+    id VARCHAR(36) PRIMARY KEY,
+    user_id VARCHAR(36) NOT NULL,
+    name VARCHAR(100) NOT NULL,
+    icon VARCHAR(50) DEFAULT 'repeat',
+    color VARCHAR(7) DEFAULT '#6366f1',
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    INDEX idx_user_transfer_categories (user_id)
+) ENGINE=InnoDB;
+
+-- ============================================
+-- DEBTS TABLE
+-- Stores user debts/loans
+-- Must be created AFTER accounts table (FK dependency)
+-- ============================================
+CREATE TABLE IF NOT EXISTS debts (
+    id VARCHAR(36) PRIMARY KEY,
+    user_id VARCHAR(36) NOT NULL,
+    name VARCHAR(100) NOT NULL,
+    amount DECIMAL(15, 2) NOT NULL,
+    paid DECIMAL(15, 2) DEFAULT 0.00,
+    account_id VARCHAR(36) NOT NULL,
+    due_date DATE NULL,
+    notes TEXT NULL,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (account_id) REFERENCES accounts(id) ON DELETE CASCADE,
+    INDEX idx_user_debts (user_id)
+) ENGINE=InnoDB;
+
+-- ============================================
 -- RECORDS TABLE
 -- Stores all financial transactions
+-- Must be created AFTER categories, transfer_categories, and accounts (FK dependencies)
 -- ============================================
 CREATE TABLE IF NOT EXISTS records (
     id VARCHAR(36) PRIMARY KEY,
@@ -141,44 +182,6 @@ CREATE TABLE IF NOT EXISTS user_sessions (
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     INDEX idx_session_token (token),
     INDEX idx_session_user (user_id)
-) ENGINE=InnoDB;
-
--- ============================================
--- DEBTS TABLE
--- Stores user debts/loans
--- ============================================
-CREATE TABLE IF NOT EXISTS debts (
-    id VARCHAR(36) PRIMARY KEY,
-    user_id VARCHAR(36) NOT NULL,
-    name VARCHAR(100) NOT NULL,
-    amount DECIMAL(15, 2) NOT NULL,
-    paid DECIMAL(15, 2) DEFAULT 0.00,
-    account_id VARCHAR(36) NOT NULL,
-    due_date DATE NULL,
-    notes TEXT NULL,
-    is_active BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    FOREIGN KEY (account_id) REFERENCES accounts(id) ON DELETE CASCADE,
-    INDEX idx_user_debts (user_id)
-) ENGINE=InnoDB;
-
--- ============================================
--- TRANSFER CATEGORIES TABLE
--- Stores categories specific to transfers
--- ============================================
-CREATE TABLE IF NOT EXISTS transfer_categories (
-    id VARCHAR(36) PRIMARY KEY,
-    user_id VARCHAR(36) NOT NULL,
-    name VARCHAR(100) NOT NULL,
-    icon VARCHAR(50) DEFAULT 'repeat',
-    color VARCHAR(7) DEFAULT '#6366f1',
-    is_active BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    INDEX idx_user_transfer_categories (user_id)
 ) ENGINE=InnoDB;
 
 -- ============================================
